@@ -13,6 +13,7 @@ import {
   SettingsRepository,
 } from '../storage';
 import type { AnalysisController } from '../features/analysis/analysis-controller';
+import { estimateRuntimeResources } from '../runtime';
 
 const logs = new DexieDailyLogRepository();
 const settings = new SettingsRepository();
@@ -53,14 +54,24 @@ const buildInput = async (date: string): Promise<AnalysisRequest> => {
 
 export const localAnalysisController: AnalysisController = {
   async checkConnection(runtime, signal) {
-    const client = createLocalHttpLlmClient({ endpoint: runtime.endpoint, modelId: runtime.modelId || '__connection_check__' });
+    const client = createLocalHttpLlmClient({ endpoint: runtime.endpoint, modelId: runtime.modelId || '__connection_check__', timeoutMs: runtime.timeoutSeconds * 1000 });
     const status = await client.healthCheck(signal);
     if (status.state !== 'ready') throw new Error(status.message || '로컬 AI에 연결할 수 없습니다.');
     const available = await client.listModels(signal);
-    return { models: available.map(model => model.id) };
+    return { models: available.map(model => {
+      const diagnostic = estimateRuntimeResources({ model: { modelId: model.id, modelBytes: model.sizeBytes, quantizationLevel: model.quantizationLevel } });
+      return { id: model.id, name: model.name, sizeBytes: model.sizeBytes, resourceFit: diagnostic.fit, resourceWarnings: diagnostic.warnings };
+    }) };
   },
 
-  async analyze({ date }, runtime, signal) {
+  async preloadModel(runtime, signal, onProgress) {
+    const client = createLocalHttpLlmClient({ endpoint: runtime.endpoint, modelId: runtime.modelId, timeoutMs: runtime.timeoutSeconds * 1000 });
+    const result = await client.warmup(signal, onProgress);
+    if (!result.loaded) throw new Error('모델 로딩 완료를 확인하지 못했습니다.');
+    return { message: result.loadDurationMs === undefined ? '모델 로딩이 완료되었습니다.' : `모델 로딩이 완료되었습니다. (${(result.loadDurationMs / 1000).toFixed(1)}초)` };
+  },
+
+  async analyze({ date }, runtime, signal, onProgress) {
     const input = await buildInput(date);
     const inputHash = await hashAnalysisRequest(input);
     const cached = await analyses.getCurrent({
@@ -71,8 +82,8 @@ export const localAnalysisController: AnalysisController = {
     });
     if (cached) return cached.result;
 
-    const client = createLocalHttpLlmClient({ endpoint: runtime.endpoint, modelId: runtime.modelId });
-    const result = await client.analyze(input, signal);
+    const client = createLocalHttpLlmClient({ endpoint: runtime.endpoint, modelId: runtime.modelId, timeoutMs: runtime.timeoutSeconds * 1000 });
+    const result = await client.analyze(input, signal, onProgress);
     await analyses.save({
       id: createAnalysisId(date, inputHash, runtime.modelId, ANALYSIS_PROMPT_VERSION),
       date,

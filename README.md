@@ -5,7 +5,7 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-58%20passed-22C55E)
+![Tests](https://img.shields.io/badge/tests-72%20passed-22C55E)
 ![Local AI](https://img.shields.io/badge/AI-localhost%20only-35624A)
 
 ## 프로젝트 개요
@@ -27,8 +27,8 @@
 | --- | --- | --- |
 | 일일 기록 MVP | 구현 완료 | 빌드·테스트·린트 통과 |
 | 주간 평균 통계 | 구현 완료 | 경계값·결측치·UI 테스트 통과 |
-| 로컬 LLM 분석 | 코드 구현 완료 | mock 런타임 테스트 통과 |
-| 실제 Ollama 모델 E2E | 검증 필요 | 현재 개발 PC에 런타임 미설치 |
+| 로컬 LLM 분석 | 구현 완료 | 사전 로딩·스트리밍·타임아웃·mock 테스트 통과 |
+| 실제 Ollama 모델 E2E | 환경 부적합 확인 | `qwen3.6:latest` 로드 중 호스트 메모리 할당 실패 |
 | IndexedDB v1→v2 실제 브라우저 마이그레이션 | 검증 필요 | 스키마·저장소 테스트로 대체 |
 
 ## 주요 기능
@@ -68,6 +68,10 @@
 - 데이터 한계와 안전 안내를 포함한 구조화 JSON 응답
 - 생성 취소, 재시도, 캐시와 오래된 결과 감지
 - 기록·날짜·모델·프롬프트 버전 기반 캐시 무효화
+- 명시적 모델 사전 로딩과 10분 `keep_alive`
+- 로딩·생성 단계 및 생성 토큰 진행 상태 표시
+- 2분·5분·10분 응답 제한 시간 선택
+- 모델 파일 크기와 RAM·VRAM 적합성 경고
 - localhost 이외의 LLM endpoint 차단
 
 ## 핵심 엔지니어링 포인트
@@ -189,10 +193,11 @@ ollama run qwen3:8b
 2. 앱에서 일일 기록을 먼저 저장합니다.
 3. `로컬 AI 연결 설정`을 엽니다.
 4. 기본 주소 `http://127.0.0.1:11434`로 연결을 확인합니다.
-5. 설치된 모델을 선택하고 전달 데이터 범위를 확인합니다.
-6. `로컬 AI로 분석`을 직접 실행합니다.
+5. 설치된 모델을 선택하고 파일 크기 및 리소스 경고를 확인합니다.
+6. 응답 제한 시간을 선택한 뒤 `모델 미리 불러오기`를 실행합니다.
+7. 준비 완료 후 `로컬 AI로 분석`을 직접 실행합니다.
 
-모델은 자동 실행되지 않으며 분석 중 취소할 수 있습니다. 로컬 모델 요청의 기본 제한 시간은 300초입니다. 실제 한국어 품질과 응답 속도는 모델 및 하드웨어에 따라 달라집니다.
+모델은 자동 실행되지 않으며 로딩·분석 중 취소할 수 있습니다. 기본 제한 시간은 300초이고 120초 또는 600초로 변경할 수 있습니다. 준비된 모델은 Ollama에 10분간 유지됩니다. 제한 시간을 늘려도 RAM·VRAM이 부족한 모델은 로드할 수 없으므로, 리소스 경고가 표시되면 더 작은 양자화 모델을 선택해야 합니다.
 
 ## 테스트
 
@@ -206,8 +211,8 @@ npm run build
 
 | 검증 | 결과 |
 | --- | --- |
-| 프로덕션 빌드 | 통과, 123개 모듈 변환 |
-| 자동 테스트 | 9개 파일·58개 테스트 통과 |
+| 프로덕션 빌드 | 통과, 126개 모듈 변환 |
+| 자동 테스트 | 10개 파일·72개 테스트 통과 |
 | ESLint | 오류·경고 없음 |
 
 주요 테스트 범위:
@@ -218,6 +223,7 @@ npm run build
 - 백업 JSON 검증과 중복 날짜 차단
 - 루프백 URL 제한과 원격 endpoint 차단
 - 모델 연결, 취소, 타임아웃과 오류 정규화
+- 모델 사전 로딩, `keep_alive`, 스트리밍 진행 상태와 리소스 진단
 - 구조화 출력 교정, 프롬프트 인젝션과 위험 조언 차단
 - 분석 캐시, stale 구분과 날짜별 삭제
 - 날짜 및 런타임 변경 시 이전 분석 결과 누수 방지
@@ -229,6 +235,7 @@ npm run build
 - [일일 기록 MVP](artifacts/wf_20260619_daily_diet_log/)
 - [주간 평균 통계](artifacts/wf_20260619_weekly_average_stats/)
 - [로컬 LLM 분석](artifacts/wf_20260619_local_llm_analysis/)
+- [로컬 AI 런타임 안정화](artifacts/wf_20260619_local_ai_runtime_reliability/)
 
 로컬 LLM 기능은 Frontend Developer, Backend Architect와 AI Engineer가 비중첩 쓰기 범위에서 병렬 구현한 뒤 통합 검증했습니다.
 
@@ -245,7 +252,8 @@ npm run build
 
 ## 알려진 제한 사항
 
-- 실제 Ollama 모델을 이용한 한국어 품질·속도·JSON 준수율 평가는 아직 필요합니다.
+- 개발 PC의 `qwen3.6:latest`(약 23.9GB)는 RTX 4070 12GB 환경에서 약 13.2GiB CUDA 호스트 버퍼를 추가 할당하지 못해 로드에 실패합니다. 앱 타임아웃이 아니라 모델과 가용 메모리의 부적합입니다.
+- 실제 Ollama 모델의 한국어 품질·속도·JSON 준수율 평가는 7B~9B급 Q4 모델로 다시 수행해야 합니다.
 - IndexedDB v1→v2 데이터 보존은 실제 브라우저 통합 테스트가 남아 있습니다.
 - Chromium 기반 360px 시각 회귀 테스트가 필요합니다.
 - 배포 환경에서는 앱 Origin과 Ollama CORS·mixed-content 동작을 확인해야 합니다.

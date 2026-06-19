@@ -15,7 +15,8 @@ const result = {
 
 function controller(overrides: Partial<AnalysisController> = {}): AnalysisController {
   return {
-    checkConnection: vi.fn().mockResolvedValue({ models: ['local-model'] }),
+    checkConnection: vi.fn().mockResolvedValue({ models: [{ id: 'local-model', name: 'Local Model', sizeBytes: 5 * 1024 ** 3, resourceFit: 'unknown', resourceWarnings: ['GPU VRAM 정보가 없어 GPU 적합도를 판단할 수 없습니다.'] }] }),
+    preloadModel: vi.fn().mockResolvedValue({ message: '모델 로딩이 완료되었습니다.' }),
     analyze: vi.fn().mockResolvedValue(result),
     ...overrides,
   };
@@ -37,6 +38,10 @@ describe('AnalysisPanel', () => {
     render(<AnalysisPanel controller={service} date="2026-06-19" inputFingerprint="v1" hasSavedRecord />);
     await user.click(screen.getByText('로컬 AI 연결 설정'));
     await user.click(screen.getByRole('button', { name: '연결 확인' }));
+    expect(await screen.findByText('모델 로딩 필요')).toBeInTheDocument();
+    expect(screen.getByText('선택 모델: Local Model (5.0 GB)')).toBeInTheDocument();
+    expect(screen.getByText(/GPU VRAM 정보가 없어/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '선택 모델 불러오기' }));
     expect(await screen.findByText('분석 준비됨')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '로컬 AI로 분석' }));
     expect(await screen.findByText('분석 완료')).toBeInTheDocument();
@@ -44,8 +49,9 @@ describe('AnalysisPanel', () => {
     expect(screen.getByText(result.safetyNotice)).toBeInTheDocument();
     expect(service.analyze).toHaveBeenCalledWith(
       { date: '2026-06-19' },
-      expect.objectContaining({ modelId: 'local-model' }),
+      expect.objectContaining({ modelId: 'local-model', timeoutSeconds: 300 }),
       expect.any(AbortSignal),
+      expect.any(Function),
     );
   });
 
@@ -68,6 +74,8 @@ describe('AnalysisPanel', () => {
     render(<AnalysisPanel controller={service} date="2026-06-19" inputFingerprint="v1" hasSavedRecord />);
     await user.click(screen.getByText('로컬 AI 연결 설정'));
     await user.click(screen.getByRole('button', { name: '연결 확인' }));
+    await screen.findByText('모델 로딩 필요');
+    await user.click(screen.getByRole('button', { name: '선택 모델 불러오기' }));
     await screen.findByText('분석 준비됨');
     await user.click(screen.getByRole('button', { name: '로컬 AI로 분석' }));
     await user.click(screen.getByRole('button', { name: '분석 취소' }));
@@ -80,6 +88,8 @@ describe('AnalysisPanel', () => {
     const view = render(<AnalysisPanel controller={service} date="2026-06-19" inputFingerprint="v1" hasSavedRecord />);
     await user.click(screen.getByText('로컬 AI 연결 설정'));
     await user.click(screen.getByRole('button', { name: '연결 확인' }));
+    await screen.findByText('모델 로딩 필요');
+    await user.click(screen.getByRole('button', { name: '선택 모델 불러오기' }));
     await screen.findByText('분석 준비됨');
     await user.click(screen.getByRole('button', { name: '로컬 AI로 분석' }));
     await screen.findByText('분석 완료');
@@ -94,6 +104,8 @@ describe('AnalysisPanel', () => {
     const view = render(<AnalysisPanel key="2026-06-19" controller={service} date="2026-06-19" inputFingerprint="v1" hasSavedRecord />);
     await user.click(screen.getByText('로컬 AI 연결 설정'));
     await user.click(screen.getByRole('button', { name: '연결 확인' }));
+    await screen.findByText('모델 로딩 필요');
+    await user.click(screen.getByRole('button', { name: '선택 모델 불러오기' }));
     await screen.findByText('분석 준비됨');
     await user.click(screen.getByRole('button', { name: '로컬 AI로 분석' }));
     expect(await screen.findByText('2026-06-19 분석 결과')).toBeInTheDocument();
@@ -109,6 +121,8 @@ describe('AnalysisPanel', () => {
     render(<AnalysisPanel controller={service} date="2026-06-19" inputFingerprint="v1" hasSavedRecord />);
     await user.click(screen.getByText('로컬 AI 연결 설정'));
     await user.click(screen.getByRole('button', { name: '연결 확인' }));
+    await screen.findByText('모델 로딩 필요');
+    await user.click(screen.getByRole('button', { name: '선택 모델 불러오기' }));
     await screen.findByText('분석 준비됨');
     await user.click(screen.getByRole('button', { name: '로컬 AI로 분석' }));
     await screen.findByText('2026-06-19 분석 결과');
@@ -119,12 +133,13 @@ describe('AnalysisPanel', () => {
   });
 
   it('falls back safely when persisted runtime settings have wrong types', async () => {
-    localStorage.setItem('daily-log:llm-runtime', JSON.stringify({ endpoint: 42, modelId: ['unsafe'] }));
+    localStorage.setItem('daily-log:llm-runtime', JSON.stringify({ endpoint: 42, modelId: ['unsafe'], timeoutSeconds: 999 }));
     const user = userEvent.setup();
     render(<AnalysisPanel controller={controller()} date="2026-06-19" inputFingerprint="v1" hasSavedRecord />);
     await user.click(screen.getByText('로컬 AI 연결 설정'));
     expect(screen.getByLabelText('로컬 AI 주소')).toHaveValue('http://127.0.0.1:11434');
     expect(screen.getByLabelText('로컬 AI 모델')).toHaveValue('');
+    expect(screen.getByLabelText('응답 제한 시간')).toHaveValue('300');
   });
 
   it('falls back safely when persisted runtime settings are malformed JSON', async () => {
@@ -134,5 +149,37 @@ describe('AnalysisPanel', () => {
     await user.click(screen.getByText('로컬 AI 연결 설정'));
     expect(screen.getByLabelText('로컬 AI 주소')).toHaveValue('http://127.0.0.1:11434');
     expect(screen.getByLabelText('로컬 AI 모델')).toHaveValue('');
+  });
+
+  it('persists only a supported timeout selection', async () => {
+    const user = userEvent.setup();
+    const view = render(<AnalysisPanel controller={controller()} date="2026-06-19" inputFingerprint="v1" hasSavedRecord />);
+    await user.click(screen.getByText('로컬 AI 연결 설정'));
+    await user.selectOptions(screen.getByLabelText('응답 제한 시간'), '600');
+    expect(JSON.parse(localStorage.getItem('daily-log:llm-runtime') ?? '{}')).toMatchObject({ timeoutSeconds: 600 });
+    view.unmount();
+    render(<AnalysisPanel controller={controller()} date="2026-06-19" inputFingerprint="v1" hasSavedRecord />);
+    await user.click(screen.getByText('로컬 AI 연결 설정'));
+    expect(screen.getByLabelText('응답 제한 시간')).toHaveValue('600');
+  });
+
+  it('announces model loading and allows cancellation', async () => {
+    const user = userEvent.setup();
+    const service = controller({
+      preloadModel: vi.fn((_settings, signal, onProgress) => new Promise<{ message?: string }>((_resolve, reject) => {
+        onProgress?.({ phase: 'loading' });
+        signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      })),
+    });
+    render(<AnalysisPanel controller={service} date="2026-06-19" inputFingerprint="v1" hasSavedRecord />);
+    await user.click(screen.getByText('로컬 AI 연결 설정'));
+    await user.click(screen.getByRole('button', { name: '연결 확인' }));
+    await screen.findByText('모델 로딩 필요');
+    await user.click(screen.getByRole('button', { name: '선택 모델 불러오기' }));
+    expect(await screen.findByText('모델 로딩 중')).toBeInTheDocument();
+    expect(screen.getByText('모델 파일을 메모리에 불러오는 중입니다.')).toHaveAttribute('role', 'status');
+    await user.click(screen.getByRole('button', { name: '모델 로딩 취소' }));
+    expect(await screen.findByText('모델 로딩을 취소했습니다.')).toBeInTheDocument();
+    expect(screen.getByText('모델 로딩 필요')).toBeInTheDocument();
   });
 });

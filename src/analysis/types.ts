@@ -51,7 +51,29 @@ export interface StoredAnalysis {
   createdAt: string;
 }
 
-export interface LocalModel { id: string; name: string; sizeBytes?: number }
+export interface LocalModel {
+  id: string;
+  name: string;
+  sizeBytes?: number;
+  parameterSize?: string;
+  quantizationLevel?: string;
+  family?: string;
+  format?: string;
+  modifiedAt?: string;
+  digest?: string;
+}
+
+export type LlmProgressPhase = "loading" | "generating";
+export interface LlmProgressEvent {
+  phase: LlmProgressPhase;
+  tokensGenerated?: number;
+}
+
+export interface LlmWarmupResult {
+  modelId: string;
+  loaded: boolean;
+  loadDurationMs?: number;
+}
 
 export type LlmRuntimeState = "ready" | "unavailable";
 export interface LlmRuntimeStatus {
@@ -64,5 +86,6 @@ export interface LlmRuntimeStatus {
 export interface LocalLlmClient {
   healthCheck(signal?: AbortSignal): Promise<LlmRuntimeStatus>;
   listModels(signal?: AbortSignal): Promise<LocalModel[]>;
-  analyze(input: AnalysisRequest, signal?: AbortSignal): Promise<AnalysisResult>;
+  warmup(signal?: AbortSignal, onProgress?: (event: LlmProgressEvent) => void): Promise<LlmWarmupResult>;
+  analyze(input: AnalysisRequest, signal?: AbortSignal, onProgress?: (event: LlmProgressEvent) => void): Promise<AnalysisResult>;
 }

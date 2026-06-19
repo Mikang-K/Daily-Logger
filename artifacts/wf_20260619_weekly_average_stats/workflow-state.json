@@ -1,0 +1,57 @@
+{
+  "workflow_id": "wf_20260619_weekly_average_stats",
+  "current_stage": "release_ready",
+  "updated_at": "2026-06-19T09:32:50+09:00",
+  "stages": {
+    "intake": {
+      "status": "completed",
+      "task_id": "task_weekly_intake_001"
+    },
+    "product_planning": {
+      "status": "completed",
+      "task_id": "task_weekly_product_001",
+      "artifact": "01-product/FEATURE_SPEC.md"
+    },
+    "technical_design": {
+      "status": "completed",
+      "task_id": "task_weekly_architecture_001",
+      "draft_artifact": "02-architecture/TECH_DESIGN.md"
+    },
+    "task_planning": {
+      "status": "completed",
+      "task_id": "task_weekly_planning_001",
+      "draft_artifact": "03-planning/TASK_BREAKDOWN.md"
+    },
+    "implementation": {
+      "status": "completed",
+      "task_id": "task_weekly_implementation_001",
+      "artifact": "04-development/IMPLEMENTATION_NOTES.md"
+    },
+    "test": {
+      "status": "completed",
+      "task_id": "task_weekly_test_001",
+      "artifact": "05-testing/TEST_REPORT.md"
+    },
+    "review": {
+      "status": "completed",
+      "task_id": "task_weekly_review_001",
+      "artifact": "06-review/REVIEW_REPORT.md"
+    },
+    "refactor": { "status": "completed", "result": "InsightsScreen extracted" },
+    "final_verification": { "status": "completed" },
+    "release_ready": {
+      "status": "completed",
+      "task_id": "task_weekly_release_001",
+      "artifact": "08-release/PR_DESCRIPTION.md"
+    }
+  },
+  "approval_record": {
+    "stage": "product_planning",
+    "task_id": "task_weekly_product_001",
+    "requested_action": "Approve weekly boundaries, averaging denominators, eight-week range, and sparse-data policy",
+    "risk_level": "low",
+    "approver": "user",
+    "timestamp": "2026-06-19T00:00:00+09:00",
+    "decision": "approved via implementation request"
+  }
+}

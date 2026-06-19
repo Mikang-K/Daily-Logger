@@ -1,0 +1,53 @@
+{
+  "workflow_id": "wf_20260619_local_llm_analysis",
+  "current_stage": "final_verification",
+  "updated_at": "2026-06-19T13:17:21+09:00",
+  "stages": {
+    "intake": { "status": "completed", "task_id": "task_llm_intake_001" },
+    "product_planning": {
+      "status": "completed",
+      "task_id": "task_llm_product_001",
+      "artifact": "01-product/FEATURE_SPEC.md"
+    },
+    "technical_design": {
+      "status": "completed",
+      "task_id": "task_llm_architecture_001",
+      "draft_artifact": "02-architecture/TECH_DESIGN.md"
+    },
+    "task_planning": {
+      "status": "completed",
+      "task_id": "task_llm_planning_001",
+      "draft_artifact": "03-planning/TASK_BREAKDOWN.md"
+    },
+    "implementation": { "status": "completed" },
+    "test": {
+      "status": "completed",
+      "task_id": "task_llm_test_001",
+      "artifact": "05-testing/TEST_REPORT.md"
+    },
+    "review": {
+      "status": "completed",
+      "task_id": "task_llm_review_001",
+      "artifact": "06-review/REVIEW_REPORT.md"
+    },
+    "refactor": { "status": "completed", "result": "analysis UI and controller isolated" },
+    "final_verification": {
+      "status": "needs_approval",
+      "limitations": ["actual Ollama model E2E pending", "browser v1-to-v2 migration test pending"]
+    },
+    "release_ready": {
+      "status": "pending",
+      "task_id": "task_llm_release_001",
+      "draft_artifact": "08-release/PR_DESCRIPTION.md"
+    }
+  },
+  "approval_record": {
+    "stage": "product_planning",
+    "task_id": "task_llm_product_001",
+    "requested_action": "Approve local runtime architecture, health-data boundary, manual trigger, and medical-safety policy",
+    "risk_level": "high",
+    "approver": "user",
+    "timestamp": "2026-06-19T00:00:00+09:00",
+    "decision": "approved via explicit implementation request using named specialist roles"
+  }
+}

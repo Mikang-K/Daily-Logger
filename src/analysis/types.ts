@@ -40,6 +40,28 @@ export interface AnalysisResult {
   safetyNotice: string;
 }
 
+export type CalorieEstimateConfidence = "low" | "medium" | "high";
+
+export interface FoodCalorieEstimateRequest {
+  schemaVersion: 1;
+  foodName: string;
+  servingDescription?: string;
+  preparation?: string;
+  productOrRestaurant?: string;
+  note?: string;
+}
+
+export interface FoodCalorieEstimateResult {
+  schemaVersion: 1;
+  foodName: string;
+  servingDescription: string;
+  calorieMin: number;
+  calorieMax: number;
+  estimatedCalories: number;
+  confidence: CalorieEstimateConfidence;
+  assumptions: string[];
+}
+
 export interface StoredAnalysis {
   id: string;
   date: string;
@@ -88,4 +110,5 @@ export interface LocalLlmClient {
   listModels(signal?: AbortSignal): Promise<LocalModel[]>;
   warmup(signal?: AbortSignal, onProgress?: (event: LlmProgressEvent) => void): Promise<LlmWarmupResult>;
   analyze(input: AnalysisRequest, signal?: AbortSignal, onProgress?: (event: LlmProgressEvent) => void): Promise<AnalysisResult>;
+  estimateFoodCalories(input: FoodCalorieEstimateRequest, signal?: AbortSignal, onProgress?: (event: LlmProgressEvent) => void): Promise<FoodCalorieEstimateResult>;
 }

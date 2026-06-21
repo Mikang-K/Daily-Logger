@@ -3,11 +3,13 @@ import { Icon } from '../components/Icons';
 import type { DailyLog } from '../domain';
 import { InsightsScreen } from '../features/insights/InsightsScreen';
 import { AnalysisPanel } from '../features/analysis/AnalysisPanel';
+import { MealEntryEditor, type EditableMeal } from '../features/calorie-estimation/MealEntryEditor';
 import { BackupService, DexieDailyLogRepository, SettingsRepository } from '../storage';
 import { localAnalysisController } from './local-analysis-controller';
+import { localFoodCalorieController } from './local-food-calorie-controller';
 
 type Tab = 'today' | 'history' | 'insights' | 'settings';
-type Meal = { id: string; type: string; name: string; calories: number };
+type Meal = EditableMeal;
 type Exercise = { id: string; name: string; minutes: number };
 type Log = { date: string; weight?: number; water?: number; condition?: number; note: string; meals: Meal[]; exercises: Exercise[] };
 
@@ -30,9 +32,11 @@ function Field({ label, suffix, children }: { label: string; suffix?: string; ch
 function TodayScreen({ log, setLog, saveLog, changeDate, hasSavedRecord }: { log: Log; setLog: (log: Log) => void; saveLog: () => Promise<void>; changeDate: (date: string) => Promise<void>; hasSavedRecord: boolean }) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
-  const calories = log.meals.reduce((sum, meal) => sum + meal.calories, 0);
+  const calories = log.meals.filter(meal => meal.calorieSource !== 'unknown').reduce((sum, meal) => sum + meal.calories, 0);
+  const estimatedMeals = log.meals.filter(meal => meal.calorieSource === 'ai_estimated').length;
+  const unknownMeals = log.meals.filter(meal => meal.calorieSource === 'unknown').length;
   const update = (patch: Partial<Log>) => { setSaved(false); setError(''); setLog({ ...log, ...patch }); };
-  const addMeal = () => update({ meals: [...log.meals, { id: crypto.randomUUID(), type: 'breakfast', name: '', calories: 0 }] });
+  const addMeal = () => update({ meals: [...log.meals, { id: crypto.randomUUID(), type: 'breakfast', name: '', calories: 0, calorieSource: 'unknown' }] });
   const addExercise = () => update({ exercises: [...log.exercises, { id: crypto.randomUUID(), name: '', minutes: 0 }] });
 
   return <div className="screen-stack">
@@ -43,7 +47,7 @@ function TodayScreen({ log, setLog, saveLog, changeDate, hasSavedRecord }: { log
     </section>
 
     <section className="summary card" aria-label="오늘 요약">
-      <div><strong>{calories.toLocaleString()}</strong><span>섭취 kcal</span></div><i /><div><strong>{log.water ?? 0}</strong><span>물 ml</span></div><i /><div><strong>{log.exercises.reduce((s, e) => s + e.minutes, 0)}</strong><span>운동 분</span></div>
+      <div><strong>{estimatedMeals > 0 ? '약 ' : ''}{calories.toLocaleString()}</strong><span>섭취 kcal{unknownMeals > 0 ? ` · 미산정 ${unknownMeals}` : ''}</span></div><i /><div><strong>{log.water ?? 0}</strong><span>물 ml</span></div><i /><div><strong>{log.exercises.reduce((s, e) => s + e.minutes, 0)}</strong><span>운동 분</span></div>
     </section>
 
     <section className="card form-card"><div className="section-title"><div><span className="step">01</span><h2>몸 상태</h2></div><span className="optional">선택</span></div>
@@ -51,13 +55,15 @@ function TodayScreen({ log, setLog, saveLog, changeDate, hasSavedRecord }: { log
       <fieldset className="condition"><legend>오늘의 컨디션</legend><div>{['매우 나쁨', '나쁨', '보통', '좋음', '아주 좋음'].map((label, i) => <button type="button" aria-label={label} aria-pressed={log.condition === i + 1} onClick={() => update({ condition: i + 1 })} key={label}><span>{['😣','🙁','🙂','😊','😄'][i]}</span>{i + 1}</button>)}</div></fieldset>
     </section>
 
-    <section className="card form-card"><div className="section-title"><div><span className="step">02</span><h2>식사</h2></div><strong className="accent">{calories.toLocaleString()} kcal</strong></div>
-      {log.meals.length === 0 ? <div className="empty"><span>🥗</span><p>아직 기록한 식사가 없어요.</p></div> : log.meals.map((meal, index) => <div className="entry-row" key={meal.id}>
-        <select aria-label={`식사 ${index + 1} 구분`} value={meal.type} onChange={e => update({ meals: log.meals.map(m => m.id === meal.id ? { ...m, type: e.target.value } : m) })}><option value="breakfast">아침</option><option value="lunch">점심</option><option value="dinner">저녁</option><option value="snack">간식</option></select>
-        <input aria-label={`식사 ${index + 1} 이름`} placeholder="음식명" value={meal.name} onChange={e => update({ meals: log.meals.map(m => m.id === meal.id ? { ...m, name: e.target.value } : m) })} />
-        <input aria-label={`식사 ${index + 1} 칼로리`} className="small" type="number" min="0" max="10000" placeholder="kcal" value={meal.calories || ''} onChange={e => update({ meals: log.meals.map(m => m.id === meal.id ? { ...m, calories: Number(e.target.value) } : m) })} />
-        <button type="button" className="icon-button" aria-label={`${index + 1}번째 식사 삭제`} onClick={() => update({ meals: log.meals.filter(m => m.id !== meal.id) })}><Icon name="trash" /></button>
-      </div>)}
+    <section className="card form-card"><div className="section-title"><div><span className="step">02</span><h2>식사</h2></div><strong className="accent">{estimatedMeals > 0 ? '약 ' : ''}{calories.toLocaleString()} kcal{unknownMeals > 0 ? ` + 미산정 ${unknownMeals}` : ''}</strong></div>
+      {log.meals.length === 0 ? <div className="empty"><span>🥗</span><p>아직 기록한 식사가 없어요.</p></div> : log.meals.map((meal, index) => <MealEntryEditor
+        key={meal.id}
+        meal={meal}
+        index={index}
+        controller={localFoodCalorieController}
+        onChange={patch => update({ meals: log.meals.map(item => item.id === meal.id ? { ...item, ...patch } : item) })}
+        onRemove={() => update({ meals: log.meals.filter(item => item.id !== meal.id) })}
+      />)}
       <button type="button" className="add-button" onClick={addMeal}><Icon name="plus" /> 식사 추가</button>
     </section>
 
@@ -74,7 +80,7 @@ function TodayScreen({ log, setLog, saveLog, changeDate, hasSavedRecord }: { log
 }
 
 function HistoryScreen({ logs, open, remove }: { logs: Log[]; open: (log: Log) => void; remove: (date: string) => Promise<void> }) {
-  return <div className="page"><p className="eyebrow">차곡차곡 쌓인 하루</p><h1>지난 기록</h1>{logs.length === 0 ? <div className="card page-empty"><span>📖</span><h2>아직 기록이 없어요</h2><p>오늘의 식사부터 가볍게 남겨보세요.</p></div> : <div className="history-list">{logs.map(log => <div className="card history-row" key={log.date}><button className="history-item" onClick={() => open(log)}><time>{new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(`${log.date}T12:00:00`))}</time><span>{log.meals.reduce((s,m) => s + m.calories, 0).toLocaleString()} kcal · {log.weight ? `${log.weight} kg` : '체중 미기록'}</span><b>›</b></button><button type="button" className="history-delete" aria-label={`${log.date} 기록 삭제`} onClick={() => void remove(log.date)}><Icon name="trash" /></button></div>)}</div>}</div>;
+  return <div className="page"><p className="eyebrow">차곡차곡 쌓인 하루</p><h1>지난 기록</h1>{logs.length === 0 ? <div className="card page-empty"><span>📖</span><h2>아직 기록이 없어요</h2><p>오늘의 식사부터 가볍게 남겨보세요.</p></div> : <div className="history-list">{logs.map(log => { const counted = log.meals.filter(meal => meal.calorieSource !== 'unknown'); const estimated = counted.some(meal => meal.calorieSource === 'ai_estimated'); const unknown = log.meals.length - counted.length; return <div className="card history-row" key={log.date}><button className="history-item" onClick={() => open(log)}><time>{new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(`${log.date}T12:00:00`))}</time><span>{estimated ? '약 ' : ''}{counted.reduce((sum, meal) => sum + meal.calories, 0).toLocaleString()} kcal{unknown > 0 ? ` + 미산정 ${unknown}` : ''} · {log.weight ? `${log.weight} kg` : '체중 미기록'}</span><b>›</b></button><button type="button" className="history-delete" aria-label={`${log.date} 기록 삭제`} onClick={() => void remove(log.date)}><Icon name="trash" /></button></div>; })}</div>}</div>;
 }
 
 function SettingsScreen({ onDataChanged }: { onDataChanged: () => Promise<void> }) {

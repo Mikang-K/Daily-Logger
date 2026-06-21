@@ -4,8 +4,15 @@ import {
   assertSafeAnalysis,
   buildAnalysisUserPrompt,
   buildRepairPrompt,
+  buildFoodCalorieRepairPrompt,
+  buildFoodCalorieUserPrompt,
+  FOOD_CALORIE_SYSTEM_PROMPT,
+  foodCalorieEstimateRequestSchema,
+  foodCalorieEstimateResultSchema,
   type AnalysisRequest,
   type AnalysisResult,
+  type FoodCalorieEstimateRequest,
+  type FoodCalorieEstimateResult,
   type LlmProgressEvent,
   type LlmRuntimeStatus,
   type LlmWarmupResult,
@@ -210,6 +217,31 @@ export const createLocalHttpLlmClient = (options: LocalHttpLlmClientOptions): Lo
       }
       const code = lastError instanceof Error && "code" in lastError && lastError.code === "unsafe_output" ? "unsafe_output" : "invalid_response";
       throw new LlmClientError(code, code === "unsafe_output" ? "안전 정책에 맞지 않는 결과를 차단했습니다." : "모델 결과가 필요한 형식과 맞지 않습니다.");
+    },
+    async estimateFoodCalories(
+      input: FoodCalorieEstimateRequest,
+      signal?: AbortSignal,
+      onProgress?: (event: LlmProgressEvent) => void,
+    ): Promise<FoodCalorieEstimateResult> {
+      const validatedInput = foodCalorieEstimateRequestSchema.parse(input);
+      const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+        { role: "system", content: FOOD_CALORIE_SYSTEM_PROMPT },
+        { role: "user", content: buildFoodCalorieUserPrompt(validatedInput) },
+      ];
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const raw = await generate(messages, signal, onProgress);
+        try {
+          return foodCalorieEstimateResultSchema.parse(parseJsonObject(raw));
+        } catch {
+          if (attempt === 0) {
+            messages.push(
+              { role: "assistant", content: raw.slice(0, 12_000) },
+              { role: "user", content: buildFoodCalorieRepairPrompt() },
+            );
+          }
+        }
+      }
+      throw new LlmClientError("invalid_response", "모델의 칼로리 추정 결과가 필요한 형식과 맞지 않습니다.");
     },
   };
 };

@@ -45,6 +45,8 @@ export const calculateWeeklyStatistics = (
   const weights = daily.flatMap((day) => day.weightKg === undefined ? [] : [day.weightKg]);
   const totalCalories = daily.reduce((sum, day) => sum + day.caloriesConsumed, 0);
   const totalExerciseMinutes = daily.reduce((sum, day) => sum + day.exerciseMinutes, 0);
+  const estimatedMealCount = daily.reduce((sum, day) => sum + day.estimatedMealCount, 0);
+  const unknownCalorieMealCount = daily.reduce((sum, day) => sum + day.unknownCalorieMealCount, 0);
 
   return {
     weekStart: startDate,
@@ -54,6 +56,8 @@ export const calculateWeeklyStatistics = (
     averageWeightKg: weights.length === 0 ? undefined : roundToOneDecimal(weights.reduce((sum, weight) => sum + weight, 0) / weights.length),
     averageCaloriesPerLoggedDay: daily.length === 0 ? undefined : Math.round(totalCalories / daily.length),
     averageExerciseMinutesPerLoggedDay: daily.length === 0 ? undefined : Math.round(totalExerciseMinutes / daily.length),
+    estimatedMealCount,
+    unknownCalorieMealCount,
   };
 };
 

@@ -2,12 +2,44 @@ export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
 
 export type MealType = (typeof MEAL_TYPES)[number];
 
+export const CALORIE_SOURCES = ["manual", "ai_estimated", "unknown"] as const;
+export type CalorieSource = (typeof CALORIE_SOURCES)[number];
+export const ESTIMATE_CONFIDENCE_LEVELS = ["low", "medium", "high"] as const;
+export type EstimateConfidence = (typeof ESTIMATE_CONFIDENCE_LEVELS)[number];
+
+export interface CalorieEstimate {
+  min: number;
+  max: number;
+  representative: number;
+  confidence: EstimateConfidence;
+  assumptions: string[];
+  modelId: string;
+  estimatedAt: string;
+}
+
 export interface MealEntry {
   id: string;
   type: MealType;
   name: string;
   calories: number;
+  /** Missing on legacy records and therefore interpreted as `manual`. */
+  calorieSource?: CalorieSource;
+  servingDescription?: string;
+  calorieEstimate?: CalorieEstimate;
   note?: string;
+}
+
+export interface ConfirmedFoodCalorie {
+  id: string;
+  normalizedName: string;
+  displayName: string;
+  servingDescription: string;
+  preparationNote?: string;
+  calories: number;
+  calorieSource: Exclude<CalorieSource, "unknown">;
+  calorieEstimate?: CalorieEstimate;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ExerciseEntry {
@@ -43,6 +75,7 @@ export interface DietLogBackup {
   exportedAt: string;
   dailyLogs: DailyLog[];
   settings: UserSettings | null;
+  confirmedFoods?: ConfirmedFoodCalorie[];
 }
 
 export interface DailySummary {
@@ -52,6 +85,8 @@ export interface DailySummary {
   netCalories: number;
   exerciseMinutes: number;
   weightKg?: number;
+  estimatedMealCount: number;
+  unknownCalorieMealCount: number;
 }
 
 export interface RangeStatistics {
@@ -62,6 +97,8 @@ export interface RangeStatistics {
   averageCaloriesPerLoggedDay: number;
   weightChangeKg?: number;
   daily: DailySummary[];
+  estimatedMealCount: number;
+  unknownCalorieMealCount: number;
 }
 
 export interface WeeklyStatistics {
@@ -72,6 +109,8 @@ export interface WeeklyStatistics {
   averageWeightKg?: number;
   averageCaloriesPerLoggedDay?: number;
   averageExerciseMinutesPerLoggedDay?: number;
+  estimatedMealCount?: number;
+  unknownCalorieMealCount?: number;
 }
 
 export interface WeeklyComparison {

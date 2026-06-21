@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { DietLogDatabase } from "../../storage";
 
-describe("database v2 schema declaration", () => {
-  it("declares the existing v1 tables and the indexed analyses table", () => {
+describe("database v3 schema declaration", () => {
+  it("preserves existing tables and adds the confirmed food dictionary", () => {
     const database = new DietLogDatabase("schema-inspection-only");
 
-    expect(database.verno).toBe(2);
+    expect(database.verno).toBe(3);
     expect(database.tables.map((table) => table.name).sort()).toEqual([
       "analyses",
+      "confirmedFoods",
       "dailyLogs",
       "settings",
     ]);
@@ -18,6 +19,12 @@ describe("database v2 schema declaration", () => {
       "date",
       "[date+inputHash]",
       "createdAt",
+    ]);
+    const confirmedFoods = database.table("confirmedFoods").schema;
+    expect(confirmedFoods.primKey.name).toBe("id");
+    expect(confirmedFoods.indexes.map((index) => index.name)).toEqual([
+      "normalizedName",
+      "updatedAt",
     ]);
 
     database.close();

@@ -32,3 +32,32 @@ export const analysisResultSchema = z.object({
   positivePatterns: list, attentionPoints: list, nextActions: list,
   dataLimitations: z.array(shortText).max(5), safetyNotice: z.string().trim().min(1).max(500),
 }).strict();
+
+export const foodCalorieEstimateRequestSchema = z.object({
+  schemaVersion: z.literal(1),
+  foodName: z.string().trim().min(1).max(100),
+  servingDescription: z.string().trim().min(1).max(100).optional(),
+  preparation: z.string().trim().min(1).max(200).optional(),
+  productOrRestaurant: z.string().trim().min(1).max(200).optional(),
+  note: z.string().trim().min(1).max(500).optional(),
+}).strict();
+
+const calorieValue = z.number().finite().int().min(0).max(10_000);
+
+export const foodCalorieEstimateResultSchema = z.object({
+  schemaVersion: z.literal(1),
+  foodName: z.string().trim().min(1).max(100),
+  servingDescription: z.string().trim().min(1).max(100),
+  calorieMin: calorieValue,
+  calorieMax: calorieValue,
+  estimatedCalories: calorieValue,
+  confidence: z.enum(["low", "medium", "high"]),
+  assumptions: z.array(z.string().trim().min(1).max(200)).max(5),
+}).strict().superRefine((value, context) => {
+  if (value.calorieMin > value.calorieMax) {
+    context.addIssue({ code: "custom", path: ["calorieMin"], message: "calorieMin must not exceed calorieMax" });
+  }
+  if (value.estimatedCalories < value.calorieMin || value.estimatedCalories > value.calorieMax) {
+    context.addIssue({ code: "custom", path: ["estimatedCalories"], message: "estimatedCalories must be within the calorie range" });
+  }
+});

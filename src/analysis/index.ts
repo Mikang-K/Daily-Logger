@@ -4,3 +4,4 @@ export * from "./input";
 export * from "./hash";
 export * from "./safety";
 export * from "./prompt";
+export * from "./food-calorie-prompt";

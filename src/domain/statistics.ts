@@ -1,7 +1,8 @@
 import type { DailyLog, DailySummary, RangeStatistics } from "./models";
 
 export const summarizeDailyLog = (log: DailyLog): DailySummary => {
-  const caloriesConsumed = log.meals.reduce((sum, meal) => sum + meal.calories, 0);
+  const countedMeals = log.meals.filter((meal) => meal.calorieSource !== "unknown");
+  const caloriesConsumed = countedMeals.reduce((sum, meal) => sum + meal.calories, 0);
   const caloriesBurned = log.exercises.reduce(
     (sum, exercise) => sum + (exercise.caloriesBurned ?? 0),
     0,
@@ -14,6 +15,8 @@ export const summarizeDailyLog = (log: DailyLog): DailySummary => {
     netCalories: caloriesConsumed - caloriesBurned,
     exerciseMinutes: log.exercises.reduce((sum, exercise) => sum + exercise.durationMinutes, 0),
     weightKg: log.weightKg,
+    estimatedMealCount: log.meals.filter((meal) => meal.calorieSource === "ai_estimated").length,
+    unknownCalorieMealCount: log.meals.filter((meal) => meal.calorieSource === "unknown").length,
   };
 };
 
@@ -27,6 +30,8 @@ export const calculateRangeStatistics = (
     .sort((left, right) => left.date.localeCompare(right.date))
     .map(summarizeDailyLog);
   const totalCalories = daily.reduce((sum, day) => sum + day.caloriesConsumed, 0);
+  const estimatedMealCount = daily.reduce((sum, day) => sum + day.estimatedMealCount, 0);
+  const unknownCalorieMealCount = daily.reduce((sum, day) => sum + day.unknownCalorieMealCount, 0);
   const weightedDays = daily.filter((day) => day.weightKg !== undefined);
   const weightChangeKg =
     weightedDays.length >= 2
@@ -43,5 +48,7 @@ export const calculateRangeStatistics = (
     averageCaloriesPerLoggedDay: daily.length === 0 ? 0 : Math.round(totalCalories / daily.length),
     weightChangeKg,
     daily,
+    estimatedMealCount,
+    unknownCalorieMealCount,
   };
 };

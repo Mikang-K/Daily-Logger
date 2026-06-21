@@ -1,0 +1,26 @@
+{
+  "workflow_id": "wf_20260620_food_calorie_estimation",
+  "current_stage": "release_ready",
+  "updated_at": "2026-06-20T17:38:00+09:00",
+  "stages": {
+    "intake": { "status": "completed" },
+    "product_planning": { "status": "completed" },
+    "technical_design": { "status": "completed" },
+    "task_planning": { "status": "completed" },
+    "implementation": { "status": "completed" },
+    "test": { "status": "completed" },
+    "review": { "status": "completed" },
+    "refactor": { "status": "completed" },
+    "final_verification": { "status": "completed" },
+    "release_ready": { "status": "completed" }
+  },
+  "approval_record": {
+    "stage": "product_planning",
+    "task_id": "task_food_estimation_000",
+    "requested_action": "Implement user-confirmed food-name calorie estimation with local LLM",
+    "risk_level": "medium",
+    "approver": "user",
+    "timestamp": "2026-06-20T00:00:00+09:00",
+    "decision": "approved via explicit implementation request using named specialist roles"
+  }
+}

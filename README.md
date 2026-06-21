@@ -5,7 +5,7 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-72%20passed-22C55E)
+![Tests](https://img.shields.io/badge/tests-89%20passed-22C55E)
 ![Local AI](https://img.shields.io/badge/AI-localhost%20only-35624A)
 
 ## 프로젝트 개요
@@ -28,6 +28,7 @@
 | 일일 기록 MVP | 구현 완료 | 빌드·테스트·린트 통과 |
 | 주간 평균 통계 | 구현 완료 | 경계값·결측치·UI 테스트 통과 |
 | 로컬 LLM 분석 | 구현 완료 | 사전 로딩·스트리밍·타임아웃·mock 테스트 통과 |
+| 음식 칼로리 추정 | 구현 완료 | 사용자 승인·개인 음식 사전·범위 검증 테스트 통과 |
 | 실제 Ollama 모델 E2E | 환경 부적합 확인 | `qwen3.6:latest` 로드 중 호스트 메모리 할당 실패 |
 | IndexedDB v1→v2 실제 브라우저 마이그레이션 | 검증 필요 | 스키마·저장소 테스트로 대체 |
 
@@ -73,6 +74,16 @@
 - 2분·5분·10분 응답 제한 시간 선택
 - 모델 파일 크기와 RAM·VRAM 적합성 경고
 - localhost 이외의 LLM endpoint 차단
+
+### 음식명 기반 칼로리 추정
+
+- 음식명, 양·인분과 조리·제품 정보를 이용한 로컬 AI 추정
+- 최소·최대 범위, 대표값, 신뢰도와 추정 가정 표시
+- 사용자가 `이 값 적용`을 선택한 경우에만 기록 반영
+- 적용한 추정값의 출처·모델·추정 시각 보존
+- 동일한 음식 조건은 개인 음식 사전에서 즉시 재사용
+- 직접 수정하면 AI 출처를 제거하고 수동 입력으로 전환
+- 미산정 음식은 0 kcal로 합산하지 않고 별도 건수 표시
 
 ## 핵심 엔지니어링 포인트
 
@@ -146,6 +157,7 @@ src/
 ├─ domain/                # 기록 모델, Zod 스키마, 일별·주간 통계
 ├─ features/
 │  ├─ analysis/           # 로컬 AI 설정·상태·결과 UI
+│  ├─ calorie-estimation/ # 음식별 추정·검토·적용 UI
 │  └─ insights/           # 주간 평균 통계 UI
 ├─ llm/                   # 루프백 endpoint 및 Ollama HTTP 어댑터
 ├─ storage/               # Dexie DB, Repository, 백업 서비스
@@ -211,8 +223,8 @@ npm run build
 
 | 검증 | 결과 |
 | --- | --- |
-| 프로덕션 빌드 | 통과, 126개 모듈 변환 |
-| 자동 테스트 | 10개 파일·72개 테스트 통과 |
+| 프로덕션 빌드 | 통과, 133개 모듈 변환 |
+| 자동 테스트 | 13개 파일·89개 테스트 통과 |
 | ESLint | 오류·경고 없음 |
 
 주요 테스트 범위:
@@ -224,6 +236,8 @@ npm run build
 - 루프백 URL 제한과 원격 endpoint 차단
 - 모델 연결, 취소, 타임아웃과 오류 정규화
 - 모델 사전 로딩, `keep_alive`, 스트리밍 진행 상태와 리소스 진단
+- 음식 칼로리 범위 검증, 사용자 승인 적용과 개인 음식 사전
+- AI 추정·미산정 음식의 일일·주간 통계 처리
 - 구조화 출력 교정, 프롬프트 인젝션과 위험 조언 차단
 - 분석 캐시, stale 구분과 날짜별 삭제
 - 날짜 및 런타임 변경 시 이전 분석 결과 누수 방지
@@ -236,6 +250,7 @@ npm run build
 - [주간 평균 통계](artifacts/wf_20260619_weekly_average_stats/)
 - [로컬 LLM 분석](artifacts/wf_20260619_local_llm_analysis/)
 - [로컬 AI 런타임 안정화](artifacts/wf_20260619_local_ai_runtime_reliability/)
+- [음식명 기반 칼로리 추정](artifacts/wf_20260620_food_calorie_estimation/)
 
 로컬 LLM 기능은 Frontend Developer, Backend Architect와 AI Engineer가 비중첩 쓰기 범위에서 병렬 구현한 뒤 통합 검증했습니다.
 
@@ -243,7 +258,7 @@ npm run build
 
 - 원본 기록은 브라우저 IndexedDB에 저장됩니다.
 - JSON 백업은 사용자가 직접 내려받거나 가져올 때만 처리됩니다.
-- 로컬 AI 분석을 실행할 때만 선택 날짜와 최근 7일 요약이 로컬 LLM 프로세스로 전달됩니다.
+- 로컬 AI 분석이나 음식 칼로리 추정을 실행할 때만 필요한 기록 또는 음식 정보가 로컬 LLM 프로세스로 전달됩니다.
 - 인증 키·비밀번호·모델 원문 응답은 저장하지 않습니다.
 - 외부 LLM endpoint는 사용할 수 없습니다.
 - Google Fonts 로딩을 제외하면 앱이 건강 기록을 외부 네트워크로 전송하는 경로는 없습니다.

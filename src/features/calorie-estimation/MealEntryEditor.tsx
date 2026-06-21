@@ -1,25 +1,9 @@
 import { Icon } from '../../components/Icons';
 import type { FoodCalorieEstimateView, FoodCalorieEstimatorController } from './calorie-estimation-controller';
 import { FoodCalorieEstimator } from './FoodCalorieEstimator';
+import type { EditableMeal } from './types';
 
-export type EditableMeal = {
-  id: string;
-  type: string;
-  name: string;
-  calories: number;
-  servingDescription?: string;
-  note?: string;
-  calorieSource?: 'manual' | 'ai_estimated' | 'unknown';
-  calorieEstimate?: {
-    min: number;
-    max: number;
-    representative: number;
-    confidence: 'low' | 'medium' | 'high';
-    assumptions: string[];
-    modelId: string;
-    estimatedAt: string;
-  };
-};
+export type { EditableMeal } from './types';
 
 export function MealEntryEditor({
   meal,

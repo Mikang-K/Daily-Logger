@@ -1,0 +1,26 @@
+{
+  "workflow_id": "wf_20260621_app_screen_split",
+  "current_stage": "release_ready",
+  "updated_at": "2026-06-21T12:23:00+09:00",
+  "stages": {
+    "intake": { "status": "completed" },
+    "product_planning": { "status": "completed" },
+    "technical_design": { "status": "completed" },
+    "task_planning": { "status": "completed" },
+    "implementation": { "status": "completed" },
+    "test": { "status": "completed" },
+    "review": { "status": "completed" },
+    "refactor": { "status": "completed" },
+    "final_verification": { "status": "completed" },
+    "release_ready": { "status": "completed" }
+  },
+  "approval_record": {
+    "stage": "technical_design",
+    "task_id": "task_app_split_000",
+    "requested_action": "Behavior-preserving screen split of src/app/App.tsx",
+    "risk_level": "low",
+    "approver": "user",
+    "timestamp": "2026-06-21T00:00:00+09:00",
+    "decision": "approved via explicit refactor request using named roles"
+  }
+}

@@ -152,13 +152,16 @@ flowchart TD
 ```text
 src/
 ├─ analysis/              # 분석 요청·응답, 프롬프트, 해시, 안전 정책
-├─ app/                   # 앱 셸과 분석 통합 컨트롤러
+├─ app/                   # 앱 셸, 공용 화면 모델·서비스와 AI 컨트롤러
 ├─ components/            # 공용 UI 컴포넌트
 ├─ domain/                # 기록 모델, Zod 스키마, 일별·주간 통계
 ├─ features/
 │  ├─ analysis/           # 로컬 AI 설정·상태·결과 UI
 │  ├─ calorie-estimation/ # 음식별 추정·검토·적용 UI
-│  └─ insights/           # 주간 평균 통계 UI
+│  ├─ daily-log/          # 오늘 기록 화면
+│  ├─ history/            # 지난 기록 화면
+│  ├─ insights/           # 주간 평균 통계 UI
+│  └─ settings/           # 목표·백업·데이터 관리 화면
 ├─ llm/                   # 루프백 endpoint 및 Ollama HTTP 어댑터
 ├─ storage/               # Dexie DB, Repository, 백업 서비스
 ├─ styles/                # 모바일 우선 스타일

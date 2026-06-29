@@ -31,7 +31,7 @@ export function SettingsScreen({ onDataChanged }: { onDataChanged: () => Promise
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = `daily-diet-log-${today}.json`;
+    link.download = `daily-logger-${today}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
